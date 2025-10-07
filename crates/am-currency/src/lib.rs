@@ -1,4 +1,3 @@
-
 #[cfg(feature = "sqlx")]
 mod sqlx_support;
 
@@ -10,7 +9,7 @@ use strum_macros::{Display, EnumIter, EnumString};
 
 pub type FiatCurrency = iso_currency::Currency;
 
-#[derive(Debug, Display, EnumString, EnumIter, Serialize, Deserialize)]
+#[derive(Clone, Debug, Display, EnumString, EnumIter, Serialize, Deserialize)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum CryptoCurrency {
     #[strum(to_string = "USDC_SOL")]
@@ -20,7 +19,7 @@ pub enum CryptoCurrency {
     Btc,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Currency {
     Fiat(FiatCurrency),
     Crypto(CryptoCurrency),
