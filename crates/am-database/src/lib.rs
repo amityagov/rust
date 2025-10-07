@@ -4,8 +4,8 @@ use sqlx::postgres::PgPoolOptions;
 
 #[derive(Deserialize)]
 pub struct DatabaseConfig {
-    connection_string: String,
-    max_connections: Option<u32>,
+    pub connection_string: String,
+    pub max_connections: Option<u32>,
 }
 
 pub trait DatabaseConfigSource {
