@@ -3,4 +3,20 @@ name = "am-currency"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+sqlx = [
+  "dep:sqlx",
+  "iso_currency/with-sqlx-mysql",
+  "iso_currency/with-sqlx-postgres",
+  "iso_currency/with-sqlx-sqlite",
+]
+serde = [
+  "iso_currency/with-serde"
+]
+
 [dependencies]
+iso_currency = { version = "0.5.3", features = ["iterator"] }
+sqlx = { version = "0.8", optional = true, features = ["runtime-tokio-rustls"] }
+strum = "0.27.2"
+strum_macros = "0.27.2"
+serde = { version = "1.0.228", features = ["derive"] }
