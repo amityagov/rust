@@ -1,0 +1,11 @@
+[package]
+name = "am-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.47.1", features = ["full"] }
+axum = { version = "0.8.6", features = ["json", "tokio", "tracing", "ws"] }
+anyhow = { version = "1.0.100" }
+tracing = { version = "0.1.41" }
+am-signal = { path = "../am-signal" }

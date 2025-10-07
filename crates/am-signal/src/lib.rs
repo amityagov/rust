@@ -1,6 +1,8 @@
 use async_channel::{Receiver, Sender};
 use tracing::info;
 
+pub type ShutdownReceiver = Receiver<()>;
+
 pub fn shutdown_signal() -> (Sender<()>, Receiver<()>) {
     async_channel::unbounded::<()>()
 }
