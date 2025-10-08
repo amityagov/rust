@@ -56,6 +56,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "am-locks"
+version = "0.1.0"
+dependencies = [
+ "sqlx",
+]
+
+[[package]]
 name = "am-logging"
 version = "0.1.0"
 dependencies = [
