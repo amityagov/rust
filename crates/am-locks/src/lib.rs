@@ -1,5 +1,4 @@
 use sqlx::PgPool;
-use std::time;
 use std::time::Duration;
 
 #[derive(Clone)]
@@ -14,7 +13,16 @@ pub struct LockGuard {
 }
 
 impl DbLock {
-    async fn try_acquire(&self, pool: &PgPool) -> anyhow::Result<bool> {
+    pub fn new(owner: &str, name: &str, ttl_seconds: Option<i64>) -> Self {
+        let ttl_seconds = ttl_seconds.unwrap_or(60);
+        Self {
+            owner: owner.to_string(),
+            name: name.to_string(),
+            ttl_seconds,
+        }
+    }
+
+    pub async fn try_acquire(&self, pool: &PgPool) -> anyhow::Result<bool> {
         let mut conn = pool.acquire().await?;
         let acquired: bool = sqlx::query_scalar(
             r#"
