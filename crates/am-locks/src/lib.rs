@@ -26,7 +26,7 @@ impl DbLock {
         let mut conn = pool.acquire().await?;
         let acquired: bool = sqlx::query_scalar(
             r#"
-            SELECT acquire_lock($1, $2, $3);
+            SELECT public.acquire_lock($1, $2, $3);
             "#,
         )
         .bind(&self.name)
