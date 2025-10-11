@@ -10,6 +10,7 @@ pub struct DbLock {
 
 pub struct LockGuard {
     lock: DbLock,
+    pool: PgPool,
 }
 
 impl DbLock {
@@ -36,7 +37,10 @@ impl DbLock {
         .await?;
 
         if acquired {
-            return Ok(Some(LockGuard { lock: self.clone() }));
+            return Ok(Some(LockGuard {
+                lock: self.clone(),
+                pool: pool.clone(),
+            }));
         }
 
         Ok(None)
@@ -69,8 +73,12 @@ impl DbLock {
     }
 }
 
-impl LockGuard {
-    pub async fn release(self, pool: &PgPool) -> anyhow::Result<bool> {
-        self.lock.release(pool).await
+impl Drop for LockGuard {
+    fn drop(&mut self) {
+        let pool = self.pool.clone();
+        let lock = self.lock.clone();
+        tokio::spawn(async move {
+            _ = lock.release(&pool).await;
+        });
     }
 }
