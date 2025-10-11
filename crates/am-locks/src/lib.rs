@@ -22,7 +22,7 @@ impl DbLock {
         }
     }
 
-    pub async fn try_acquire(&self, pool: &PgPool) -> anyhow::Result<bool> {
+    pub async fn try_acquire(&self, pool: &PgPool) -> anyhow::Result<Option<LockGuard>> {
         let mut conn = pool.acquire().await?;
         let acquired: bool = sqlx::query_scalar(
             r#"
@@ -34,15 +34,19 @@ impl DbLock {
         .bind(self.ttl_seconds)
         .fetch_one(&mut *conn)
         .await?;
-        Ok(acquired)
+
+        if acquired {
+            return Ok(Some(LockGuard { lock: self.clone() }));
+        }
+
+        Ok(None)
     }
 
     pub async fn acquire(&self, pool: &PgPool, retry_delay: Duration) -> anyhow::Result<LockGuard> {
         loop {
-            if self.try_acquire(pool).await? {
+            if let Some(guard) = self.try_acquire(pool).await? {
                 tracing::trace!("Lock '{}' acquired by {}", self.name, self.owner);
-
-                return Ok(LockGuard { lock: self.clone() });
+                return Ok(guard);
             } else {
                 tracing::trace!("Lock '{}' busy, retrying...", self.name);
                 tokio::time::sleep(retry_delay).await;
