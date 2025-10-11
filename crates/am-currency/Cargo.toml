@@ -6,9 +6,7 @@ edition = "2024"
 [features]
 sqlx = [
   "dep:sqlx",
-  "iso_currency/with-sqlx-mysql",
   "iso_currency/with-sqlx-postgres",
-  "iso_currency/with-sqlx-sqlite",
 ]
 serde = [
   "iso_currency/with-serde"
