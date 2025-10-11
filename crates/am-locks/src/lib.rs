@@ -78,7 +78,15 @@ impl Drop for LockGuard {
         let pool = self.pool.clone();
         let lock = self.lock.clone();
         tokio::spawn(async move {
-            _ = lock.release(&pool).await;
+            tracing::info!("Releasing lock '{}'", lock.name);
+            match lock.release(&pool).await {
+                Ok(_) => {
+                    tracing::info!("Lock '{}' released", lock.name);
+                }
+                Err(e) => {
+                    tracing::error!("Failed to release lock '{}': {}", lock.name, e);
+                }
+            }
         });
     }
 }
