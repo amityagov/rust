@@ -1,3 +1,6 @@
+pub mod auth;
+pub mod error;
+
 use axum::Router;
 use tokio::net::{TcpListener, ToSocketAddrs};
 
