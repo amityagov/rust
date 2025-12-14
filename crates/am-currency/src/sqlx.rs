@@ -13,7 +13,7 @@ where
         value: <T as sqlx::Database>::ValueRef<'r>,
     ) -> Result<Self, sqlx::error::BoxDynError> {
         let s = <String as sqlx::Decode<T>>::decode(value)?;
-        CryptoCurrency::from_str(&s).map_err(|_| format!("Invalid CryptoCurrency: {s}").into())
+        CryptoCurrency::from_str(&s).map_err(|_| format!("Invalid crypto currency: {s}").into())
     }
 }
 

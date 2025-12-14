@@ -1,5 +1,5 @@
 #[cfg(feature = "sqlx")]
-mod sqlx_support;
+mod sqlx;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
@@ -17,6 +17,9 @@ pub enum CryptoCurrency {
 
     #[strum(to_string = "BTC")]
     Btc,
+
+    #[strum(to_string = "ETH")]
+    ETH,
 }
 
 #[derive(Debug, Clone)]

@@ -8,9 +8,6 @@ sqlx = [
   "dep:sqlx",
   "iso_currency/with-sqlx-postgres",
 ]
-serde = [
-  "iso_currency/with-serde"
-]
 
 [dependencies]
 iso_currency = { version = "0.5.3", features = ["iterator"] }

@@ -1,0 +1,40 @@
+[package]
+name = "lib"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+am-logging = { path = "../am-logging", optional = true }
+am-server = { path = "../am-server", optional = true }
+am-signal = { path = "../am-signal", optional = true }
+am-locks = { path = "../am-locks", optional = true }
+am-database = { path = "../am-database", optional = true }
+am-currency = { path = "../am-currency", optional = true }
+
+[features]
+default = []
+
+logging = ["dep:am-logging"]
+server = ["dep:am-server"]
+signal = ["dep:am-signal"]
+locks = ["dep:am-locks"]
+database = ["dep:am-database"]
+currency = ["dep:am-currency"]
+
+currency-sqlx = [
+  "currency",
+  "am-currency/sqlx",
+]
+
+currency-full = [
+  "currency-sqlx"
+]
+
+full = [
+  "logging",
+  "server",
+  "signal",
+  "locks",
+  "database",
+  "currency",
+]
