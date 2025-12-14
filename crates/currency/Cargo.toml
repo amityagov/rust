@@ -14,4 +14,4 @@ iso_currency = { version = "0.5.3", features = ["iterator"], default-features = 
 sqlx = { version = "0.8", optional = true, features = ["runtime-tokio-rustls"], default-features = false }
 strum = { version = "0.27.2", default-features = false }
 strum_macros = { version = "0.27.2", default-features = false }
-serde = { version = "1.0.228", features = ["derive"], default-features = false }
+serde = { version = "1", features = ["derive"], default-features = false }
