@@ -1,20 +1,20 @@
 #[cfg(feature = "logging")]
-pub use am_logging;
+pub use logging;
 
 #[cfg(feature = "database")]
-pub use am_database;
+pub use database;
 
 #[cfg(feature = "locks")]
-pub use am_locks;
+pub use locks;
 
 #[cfg(feature = "currency")]
-pub use am_currency;
+pub use currency;
 
 #[cfg(feature = "currency-sqlx")]
-use am_currency::sqlx;
+use currency::sqlx;
 
 #[cfg(feature = "server")]
-pub use am_server;
+pub use server;
 
 #[cfg(feature = "signal")]
-pub use am_signal;
+pub use signal;

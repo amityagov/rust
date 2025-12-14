@@ -1,11 +1,11 @@
 [workspace]
 members = [
-  "crates/am-currency",
-  "crates/am-database",
-  "crates/am-locks",
-  "crates/am-logging",
-  "crates/am-server",
-  "crates/am-signal",
+  "crates/currency",
+  "crates/database",
+  "crates/locks",
+  "crates/logging",
+  "crates/server",
+  "crates/signal",
   "crates/lib"
 ]
 resolver = "2"

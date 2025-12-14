@@ -1,0 +1,17 @@
+[package]
+name = "currency"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+sqlx = [
+  "dep:sqlx",
+  "iso_currency/with-sqlx-postgres",
+]
+
+[dependencies]
+iso_currency = { version = "0.5.3", features = ["iterator"], default-features = false }
+sqlx = { version = "0.8", optional = true, features = ["runtime-tokio-rustls"], default-features = false }
+strum = { version = "0.27.2", default-features = false }
+strum_macros = { version = "0.27.2", default-features = false }
+serde = { version = "1.0.228", features = ["derive"], default-features = false }
