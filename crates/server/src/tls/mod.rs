@@ -3,7 +3,9 @@ pub mod server;
 
 use std::sync::Arc;
 
+use anyhow::Context;
 pub use axum_server::tls_rustls::RustlsConfig;
+use base64::Engine;
 
 use self::server::TlsServerConfig;
 
@@ -82,11 +84,8 @@ impl TlsBuilder {
     }
 
     pub fn build(self) -> anyhow::Result<RustlsConfig> {
-        let server_config = TlsServerConfig::from_sources(
-            self.server_cert,
-            self.server_key,
-            self.root_ca,
-        )?;
+        let server_config =
+            TlsServerConfig::from_sources(self.server_cert, self.server_key, self.root_ca)?;
         Ok(RustlsConfig::from_config(Arc::new(
             server_config.into_inner(),
         )))
@@ -95,4 +94,15 @@ impl TlsBuilder {
 
 pub fn tls() -> TlsBuilder {
     TlsBuilder::default()
+}
+
+pub(crate) fn decode_base64_pem(raw: &str) -> anyhow::Result<Vec<u8>> {
+    let normalized = raw
+        .bytes()
+        .filter(|byte| !byte.is_ascii_whitespace())
+        .collect::<Vec<_>>();
+
+    base64::engine::general_purpose::STANDARD
+        .decode(normalized)
+        .context("Failed to decode base64")
 }

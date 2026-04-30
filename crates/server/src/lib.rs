@@ -34,16 +34,19 @@ pub async fn run_tls_server(
 ) -> anyhow::Result<()> {
     tracing::info!("Server {name} listening with mTLS on {addr:?}");
 
-    let shutdown_signal = signal::wait_shutdown_signal(signal);
+    let handle = axum_server::Handle::new();
+    let shutdown_handle = handle.clone();
 
-    tokio::select! {
-        result = axum_server::bind_rustls(addr, config).serve(router.into_make_service()) => {
-            result?;
-        }
-        _ = shutdown_signal => {
-            tracing::info!("Shutdown signal received");
-        }
-    }
+    tokio::spawn(async move {
+        signal::wait_shutdown_signal(signal).await;
+        tracing::info!("Shutdown signal received");
+        shutdown_handle.graceful_shutdown(None);
+    });
+
+    axum_server::bind_rustls(addr, config)
+        .handle(handle)
+        .serve(router.into_make_service())
+        .await?;
 
     Ok(())
 }

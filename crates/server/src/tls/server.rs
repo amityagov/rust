@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use anyhow::{Context, bail};
-use base64::Engine;
 use rustls::{
     ServerConfig,
-    server::WebPkiClientVerifier,
     pki_types::{CertificateDer, PrivateKeyDer},
+    server::WebPkiClientVerifier,
 };
 use rustls_pki_types::pem::PemObject;
 
@@ -57,15 +56,12 @@ impl TlsServerConfig {
 }
 
 fn load_cert_from_env(env: &str) -> anyhow::Result<Vec<CertificateDer<'static>>> {
-    let raw = std::env::var(env)
-        .context(format!("`{env}` environment variable is not set"))?;
+    let raw = std::env::var(env).context(format!("`{env}` environment variable is not set"))?;
     load_cert_from_value(&raw)
 }
 
 fn load_cert_from_value(raw: &str) -> anyhow::Result<Vec<CertificateDer<'static>>> {
-    let pem_bytes = base64::engine::general_purpose::STANDARD
-        .decode(raw)
-        .context("Failed to decode base64")?;
+    let pem_bytes = super::decode_base64_pem(raw)?;
 
     let certs = CertificateDer::pem_slice_iter(&pem_bytes)
         .collect::<Result<Vec<_>, _>>()
@@ -79,15 +75,12 @@ fn load_cert_from_value(raw: &str) -> anyhow::Result<Vec<CertificateDer<'static>
 }
 
 fn load_key_from_env(env: &str) -> anyhow::Result<PrivateKeyDer<'static>> {
-    let raw = std::env::var(env)
-        .context(format!("`{env}` environment variable is not set"))?;
+    let raw = std::env::var(env).context(format!("`{env}` environment variable is not set"))?;
     load_key_from_value(&raw)
 }
 
 fn load_key_from_value(raw: &str) -> anyhow::Result<PrivateKeyDer<'static>> {
-    let pem_bytes = base64::engine::general_purpose::STANDARD
-        .decode(raw)
-        .context("Failed to decode base64")?;
+    let pem_bytes = super::decode_base64_pem(raw)?;
 
     if let Ok(key) = PrivateKeyDer::from_pem_slice(&pem_bytes) {
         return Ok(key);

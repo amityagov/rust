@@ -1,5 +1,4 @@
 use anyhow::{Context, bail};
-use base64::Engine;
 use rustls::RootCertStore;
 use rustls_pki_types::{CertificateDer, pem::PemObject};
 
@@ -13,9 +12,7 @@ pub fn load_root_ca_from_env(env: &str) -> anyhow::Result<RootCertStore> {
 }
 
 pub fn load_root_ca_from_value(raw: &str) -> anyhow::Result<RootCertStore> {
-    let pem_bytes = base64::engine::general_purpose::STANDARD
-        .decode(raw)
-        .context("Failed to decode base64")?;
+    let pem_bytes = super::decode_base64_pem(raw)?;
 
     let certs = CertificateDer::pem_slice_iter(&pem_bytes)
         .collect::<Result<Vec<_>, _>>()
