@@ -21,6 +21,11 @@ locks = ["dep:locks"]
 database = ["dep:database"]
 currency = ["dep:currency"]
 
+tls-server = [
+  "server",
+  "server/tls-server",
+]
+
 currency-sqlx = [
   "currency",
   "currency/sqlx",
