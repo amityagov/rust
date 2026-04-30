@@ -3,6 +3,10 @@ name = "server"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+tls-server = ["dep:axum-server", "dep:rustls", "dep:rustls-pki-types"]
+
 [dependencies]
 tokio = { version = "1", default-features = false }
 axum = { version = "0.8.6", features = ["json", "tokio", "tracing", "ws", "http1", "http2"], default-features = false }
@@ -15,3 +19,8 @@ serde = { version = "1", features = ["derive"], default-features = false }
 headers = { version = "0.4.1", default-features = false }
 
 signal = { path = "../signal" }
+
+# TLS dependencies (only used when tls-server feature is enabled)
+axum-server = { version = "0.8", optional = true, features = ["tls-rustls"] }
+rustls = { version = "0.23", optional = true }
+rustls-pki-types = { version = "1", optional = true }
