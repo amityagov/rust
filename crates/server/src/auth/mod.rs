@@ -2,7 +2,6 @@ mod authenticated_user;
 mod bearer_auth;
 mod role;
 
-use anyhow::Context;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum_extra::TypedHeader;
@@ -14,20 +13,23 @@ use crate::error::ApplicationError;
 pub use authenticated_user::AuthenticatedUser;
 pub use role::RoleContainer;
 
+/// How incoming requests are authenticated. Install one in the request extensions (for example
+/// with `axum::Extension`) so that the [`AuthenticatedUser`] extractor can find it.
 #[derive(Clone)]
 pub enum Authentication {
     Bearer(BearerAuth),
 }
 
 impl Authentication {
-    pub fn bearer(aud: &str, iss: &str, jwk_base64: &str) -> anyhow::Result<Self> {
+    /// Bearer-token authentication; see [`BearerAuth::new`] for the key format.
+    pub fn bearer(aud: &str, iss: &str, public_key_pem_base64: &str) -> anyhow::Result<Self> {
         Ok(Authentication::Bearer(BearerAuth::new(
-            aud, iss, jwk_base64,
+            aud,
+            iss,
+            public_key_pem_base64,
         )?))
     }
-}
 
-impl Authentication {
     pub async fn authenticate<S>(
         &self,
         parts: &mut Parts,
@@ -39,9 +41,8 @@ impl Authentication {
         match self {
             Authentication::Bearer(auth) => {
                 let TypedHeader::<Authorization<Bearer>>(bearer) =
-                    TypedHeader::<_>::from_request_parts(parts, state)
+                    TypedHeader::from_request_parts(parts, state)
                         .await
-                        .context("Failed to get authorization header")
                         .map_err(|_| ApplicationError::Unauthorized)?;
 
                 auth.authenticate(bearer.token())
