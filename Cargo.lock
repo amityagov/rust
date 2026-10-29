@@ -470,13 +470,15 @@ dependencies = [
 
 [[package]]
 name = "currency"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "iso_currency",
  "serde",
+ "serde_json",
  "sqlx",
  "strum",
  "strum_macros",
+ "thiserror",
 ]
 
 [[package]]
@@ -514,7 +516,7 @@ checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
 
 [[package]]
 name = "database"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "serde",
@@ -1315,7 +1317,7 @@ dependencies = [
 
 [[package]]
 name = "lib"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "currency",
  "database",
@@ -1375,7 +1377,7 @@ dependencies = [
 
 [[package]]
 name = "locks"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "sqlx",
@@ -1391,7 +1393,7 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "logging"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "tracing-subscriber",
@@ -2071,7 +2073,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -2128,7 +2130,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "signal"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "async-channel",
  "tokio",
