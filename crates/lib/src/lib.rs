@@ -10,9 +10,6 @@ pub use locks;
 #[cfg(feature = "currency")]
 pub use currency;
 
-#[cfg(feature = "currency-sqlx")]
-use currency::sqlx;
-
 #[cfg(feature = "server")]
 pub use server;
 
