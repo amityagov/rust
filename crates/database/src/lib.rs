@@ -27,18 +27,48 @@ pub struct Database {
 }
 
 /// Connects a pool using the configuration provided by `source`.
+///
+/// Fails if `max_connections` is zero.
 pub async fn create_database<T>(source: &T) -> anyhow::Result<Database>
 where
     T: DatabaseConfigSource,
 {
     let config = source.get_config();
+    let max_connections = config.max_connections.unwrap_or(DEFAULT_MAX_CONNECTIONS);
+    // A pool of zero connections connects fine and then never hands one out.
+    anyhow::ensure!(max_connections > 0, "max_connections must be at least 1");
 
     let pool = PgPoolOptions::new()
-        .max_connections(config.max_connections.unwrap_or(DEFAULT_MAX_CONNECTIONS))
+        .max_connections(max_connections)
         .connect(&config.connection_string)
         .await?;
 
     tracing::info!("connected to database");
 
     Ok(Database { pool })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Config(DatabaseConfig);
+
+    impl DatabaseConfigSource for Config {
+        fn get_config(&self) -> &DatabaseConfig {
+            &self.0
+        }
+    }
+
+    #[tokio::test]
+    async fn rejects_an_empty_pool() {
+        let config = Config(DatabaseConfig {
+            connection_string: "postgres://localhost/unused".into(),
+            max_connections: Some(0),
+        });
+
+        let error = create_database(&config).await.err().unwrap();
+
+        assert!(error.to_string().contains("max_connections"));
+    }
 }
