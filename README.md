@@ -24,7 +24,7 @@ Add the crate as a git dependency, pinned to a release tag, with the features yo
 
 ```toml
 [dependencies]
-lib = { git = "https://github.com/amityagov/rust.git", tag = "v0.3.0", features = ["server", "signal", "logging"] }
+lib = { git = "https://github.com/amityagov/rust.git", tag = "v0.4.0", features = ["server", "signal", "logging"] }
 ```
 
 A service with logging and graceful shutdown:
@@ -95,7 +95,9 @@ Built on [axum](https://docs.rs/axum) 0.8.
 ### Running a server
 
 - `run_server(name, router, addr, shutdown)` binds `addr`, logs it, serves the router and finishes
-  gracefully when the shutdown latch fires.
+  gracefully when the shutdown latch fires. Open connections get `DEFAULT_SHUTDOWN_GRACE` (30 s) to
+  finish; then the server stops anyway, so one stuck request cannot keep the process alive.
+  `run_server_with_grace` takes the period as an argument.
 - `run_tls_server(name, router, addr, tls_config, shutdown)` does the same over mutual TLS
   (feature `tls-server`).
 
@@ -228,35 +230,55 @@ async fn connect(config: &Config) -> anyhow::Result<sqlx::PgPool> {
 
 ## `locks`: distributed locks
 
-Named locks with an owner and a time to live, stored in Postgres. A lock that is never released
-expires by itself, so a crashed owner cannot block the others forever.
+Named locks with a time to live, stored in Postgres. A lock that is never released expires by itself,
+so a crashed holder cannot block the others forever.
 
-The application schema must define two SQL functions, which this crate calls:
+Run `lib::locks::SCHEMA_SQL` as one of your migrations: it creates the `public.locks` table and the two
+functions this crate calls.
 
 ```sql
 public.acquire_lock(lock_name text, lock_owner text, ttl_seconds bigint) returns boolean
 public.release_lock(lock_name text, lock_owner text) returns boolean
 ```
 
-- `DbLock::new(owner, name, ttl_seconds)` describes a lock; the TTL defaults to 60 seconds.
+- `DbLock::new(owner, name, ttl_seconds)` describes a lock; the TTL defaults to 60 seconds and must be
+  positive. `owner` only labels who is asking (a service instance, say); it appears in the table to help
+  debugging.
 - `try_acquire(&pool)` returns `Some(LockGuard)` if the lock was free, `None` if someone holds it.
-- `acquire(&pool, retry_delay)` waits, retrying until it gets the lock.
-- `release(&pool)` releases explicitly and reports whether this owner held the lock.
-- Dropping a `LockGuard` releases the lock in a background task. Outside a Tokio runtime the release
-  is skipped with a warning and the TTL takes over.
+- `acquire_timeout(&pool, retry_delay, timeout)` waits, retrying with a random spread of ±50%, and
+  returns `None` at the deadline. `acquire(&pool, retry_delay)` waits forever.
+- `LockGuard::release()` releases the lock, waits for the database and says whether it was still ours.
+- Dropping a `LockGuard` releases the lock in a background task instead. That is not guaranteed to
+  finish (the process may exit first, and outside a Tokio runtime it is skipped with a warning); the
+  TTL frees the lock in those cases.
+
+Every acquisition is a separate holder, even for the same `DbLock` or the same `owner`: two callers
+never hold one lock at once.
+
+**Choose the TTL for the longest the work can take.** Nothing renews a lock, so if the work outlives the
+TTL the lock expires, another holder gets in, and the first one is not told. Do not cancel `acquire`
+(for example in a `select!`): if it is cancelled while the database grants the lock, the lock stays
+taken until the TTL runs out. Use `acquire_timeout`.
 
 ```rust
 use std::time::Duration;
 use lib::locks::DbLock;
 
 async fn nightly_job(pool: &sqlx::PgPool) -> anyhow::Result<()> {
-    let lock = DbLock::new("worker-1", "nightly-job", Some(120));
+    let lock = DbLock::new("worker-1", "nightly-job", Some(120))?;
 
-    if let Some(_guard) = lock.try_acquire(pool).await? {
-        // Runs on one worker at a time; the lock is released when the guard is dropped.
+    if let Some(guard) = lock.try_acquire(pool).await? {
+        // Runs on one worker at a time.
+        guard.release().await?;
     }
 
-    let _guard = lock.acquire(pool, Duration::from_secs(1)).await?;
+    let timeout = Duration::from_secs(30);
+    if let Some(_guard) = lock
+        .acquire_timeout(pool, Duration::from_secs(1), timeout)
+        .await?
+    {
+        // The lock is released when the guard is dropped.
+    }
     Ok(())
 }
 ```
@@ -295,7 +317,7 @@ assert_eq!(serde_json::to_string(&usdc)?, r#""USDC_SOL""#);
 
 Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
-All crates share one version, which is also the git tag (`v0.3.0`). Depend on a tag, not on a
+All crates share one version, which is also the git tag (`v0.4.0`). Depend on a tag, not on a
 branch, so a build does not change when `main` moves. The crates are `0.x`: expect breaking changes
 between minor versions.
 

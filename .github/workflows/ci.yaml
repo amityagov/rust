@@ -11,6 +11,18 @@ env:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,6 +38,9 @@ jobs:
           cargo clippy --workspace --all-targets -- -D warnings
           cargo clippy -p server --features tls-server --all-targets -- -D warnings
       - name: Tests
+        env:
+          # The lock tests run against this scratch database; without it they are skipped.
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
         run: |
           cargo test --workspace
           cargo test -p server --features tls-server
