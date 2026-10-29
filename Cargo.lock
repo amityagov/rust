@@ -1315,7 +1315,7 @@ dependencies = [
 
 [[package]]
 name = "lib"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "currency",
  "database",
@@ -2071,7 +2071,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -2083,6 +2083,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "serde",
+ "serde_json",
  "signal",
  "tokio",
  "tracing",
