@@ -7,3 +7,6 @@ edition = "2024"
 async-channel = { version = "2.5.0", default-features = false }
 tracing = { version = "0", default-features = false }
 tokio = { version = "1", features = ["signal", "macros"], default-features = false }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }
