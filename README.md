@@ -293,6 +293,8 @@ assert_eq!(serde_json::to_string(&usdc)?, r#""USDC_SOL""#);
 
 ## Versioning
 
+Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+
 All crates share one version, which is also the git tag (`v0.3.0`). Depend on a tag, not on a
 branch, so a build does not change when `main` moves. The crates are `0.x`: expect breaking changes
 between minor versions.
