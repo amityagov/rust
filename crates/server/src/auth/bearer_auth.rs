@@ -69,18 +69,24 @@ mod tests {
     use jsonwebtoken::{EncodingKey, Header};
     use serde::Serialize;
 
-    // A throwaway P-256 key pair that exists only for these tests.
-    const PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgIOokwRIWAZ1ZfEIV
-L1slXGvZBohmiTmuU4TCjrl+xtmhRANCAAR1jQtuUFY7wK2S1KTV5ULO35jAXXRF
-PCueAM+8TjOLoQ90xYm8Zhz6l3z+CKPaupm7hVv4TTg+H97j5Br2MzEZ
------END PRIVATE KEY-----
-";
-    const PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEdY0LblBWO8CtktSk1eVCzt+YwF10
-RTwrngDPvE4zi6EPdMWJvGYc+pd8/gij2rqZu4Vb+E04Ph/e4+Qa9jMxGQ==
------END PUBLIC KEY-----
-";
+    use p256::SecretKey;
+    use p256::elliptic_curve::rand_core::OsRng;
+    use p256::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
+    use std::sync::OnceLock;
+
+    /// A P-256 key pair generated once per test run, as (private, public) PEM.
+    fn key_pair() -> &'static (String, String) {
+        static KEYS: OnceLock<(String, String)> = OnceLock::new();
+        KEYS.get_or_init(|| {
+            let secret = SecretKey::random(&mut OsRng);
+            let private = secret.to_pkcs8_pem(LineEnding::LF).unwrap().to_string();
+            let public = secret
+                .public_key()
+                .to_public_key_pem(LineEnding::LF)
+                .unwrap();
+            (private, public)
+        })
+    }
 
     #[derive(Serialize)]
     struct TestClaims<'a> {
@@ -99,12 +105,12 @@ RTwrngDPvE4zi6EPdMWJvGYc+pd8/gij2rqZu4Vb+E04Ph/e4+Qa9jMxGQ==
             scope: "read",
             exp,
         };
-        let key = EncodingKey::from_ec_pem(PRIVATE_KEY.as_bytes()).unwrap();
+        let key = EncodingKey::from_ec_pem(key_pair().0.as_bytes()).unwrap();
         jsonwebtoken::encode(&Header::new(ES256), &claims, &key).unwrap()
     }
 
     fn auth() -> BearerAuth {
-        let key = base64::engine::general_purpose::URL_SAFE.encode(PUBLIC_KEY);
+        let key = base64::engine::general_purpose::URL_SAFE.encode(&key_pair().1);
         BearerAuth::new("api", "issuer", &key).unwrap()
     }
 

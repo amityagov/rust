@@ -2082,6 +2082,7 @@ dependencies = [
  "base64",
  "headers",
  "jsonwebtoken",
+ "p256",
  "rustls",
  "rustls-pki-types",
  "serde",
