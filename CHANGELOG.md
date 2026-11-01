@@ -6,6 +6,17 @@ may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-01
+
+### Changed
+
+- `server` (`tls-server`): the crypto provider is `ring` only. `rustls` is built without default
+  features and `axum-server` with `tls-rustls-no-provider`, so `aws-lc-rs` (and its C build) is no
+  longer pulled in by `lib`. `tls::TlsBuilder::build` installs `ring` as the process default provider
+  when none is installed; before, a build that also contained `aws-lc-rs` made `rustls` panic while
+  building the server configuration. An application that wants `aws-lc-rs` must install it before
+  calling `build`.
+
 ## [0.4.0] - 2026-10-29
 
 ### Added

@@ -24,7 +24,7 @@ Add the crate as a git dependency, pinned to a release tag, with the features yo
 
 ```toml
 [dependencies]
-lib = { git = "https://github.com/amityagov/rust.git", tag = "v0.4.0", features = ["server", "signal", "logging"] }
+lib = { git = "https://github.com/amityagov/rust.git", tag = "v0.5.0", features = ["server", "signal", "logging"] }
 ```
 
 A service with logging and graceful shutdown:
@@ -317,7 +317,7 @@ assert_eq!(serde_json::to_string(&usdc)?, r#""USDC_SOL""#);
 
 Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
-All crates share one version, which is also the git tag (`v0.4.0`). Depend on a tag, not on a
+All crates share one version, which is also the git tag (`v0.5.0`). Depend on a tag, not on a
 branch, so a build does not change when `main` moves. The crates are `0.x`: expect breaking changes
 between minor versions.
 

@@ -78,6 +78,10 @@ impl TlsBuilder {
     }
 
     pub fn build(self) -> anyhow::Result<RustlsConfig> {
+        // rustls picks no provider by itself when both `ring` and `aws-lc-rs` are in the build, and
+        // panics while building the configuration. This crate uses `ring`; an error here only means
+        // a provider is installed already.
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let server_config =
             TlsServerConfig::from_sources(self.server_cert, self.server_key, self.root_ca)?;
         Ok(RustlsConfig::from_config(Arc::new(
