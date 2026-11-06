@@ -9,7 +9,7 @@ may contain breaking changes.
 ### Added
 
 - `currency`: `CryptoCurrency` lists every system asset of Custody (`SOL`, `TON`, `BTC_TEST`,
-  `USDC_ERC20`, `USDT_TRC20`, the devnet and testnet tokens and the others, 16 in all), so the codes
+  `USDC_ERC20`, `USDT_TRC20`, `USDT_TON_TEST`, the devnet and testnet tokens and the others, 16 in all), so the codes
   of the Ledger currencies and of the Custody assets have one source.
 - `currency`: `CryptoCurrency::decimals` and `Currency::decimals`, the decimal places of the smallest
   unit (`None` for a fiat currency without a minor unit).

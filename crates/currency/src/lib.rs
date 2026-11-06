@@ -97,10 +97,10 @@ pub enum CryptoCurrency {
     #[serde(rename = "USDT_ETH_TEST")]
     UsdtEthTest,
 
-    /// ALTXUSDT token on the TON testnet.
-    #[strum(to_string = "ALTXUSDT_TEST")]
-    #[serde(rename = "ALTXUSDT_TEST")]
-    AltxusdtTest,
+    /// USDT-like jetton on the TON testnet.
+    #[strum(to_string = "USDT_TON_TEST")]
+    #[serde(rename = "USDT_TON_TEST")]
+    UsdtTonTest,
 }
 
 impl CryptoCurrency {
@@ -120,7 +120,7 @@ impl CryptoCurrency {
             | CryptoCurrency::UsdtTrc20
             | CryptoCurrency::UsdtSolTest
             | CryptoCurrency::UsdtEthTest
-            | CryptoCurrency::AltxusdtTest => 6,
+            | CryptoCurrency::UsdtTonTest => 6,
         }
     }
 }
@@ -276,7 +276,7 @@ mod tests {
                 "USDC_SOL_TEST",
                 "USDT_SOL_TEST",
                 "USDT_ETH_TEST",
-                "ALTXUSDT_TEST",
+                "USDT_TON_TEST",
             ]
         );
         let mut unique = codes.clone();
@@ -306,7 +306,7 @@ mod tests {
             ("USDT_TRC20", 6),
             ("USDT_SOL_TEST", 6),
             ("USDT_ETH_TEST", 6),
-            ("ALTXUSDT_TEST", 6),
+            ("USDT_TON_TEST", 6),
         ] {
             assert!(decimals.contains(&(code.to_owned(), expected)), "{code}");
         }
