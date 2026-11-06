@@ -36,6 +36,93 @@ pub enum CryptoCurrency {
     #[strum(to_string = "ETH")]
     #[serde(rename = "ETH")]
     Eth,
+
+    /// Solana.
+    #[strum(to_string = "SOL")]
+    #[serde(rename = "SOL")]
+    Sol,
+
+    /// Solana devnet.
+    #[strum(to_string = "SOL_TEST")]
+    #[serde(rename = "SOL_TEST")]
+    SolTest,
+
+    /// Toncoin.
+    #[strum(to_string = "TON")]
+    #[serde(rename = "TON")]
+    Ton,
+
+    /// Toncoin on the TON testnet.
+    #[strum(to_string = "TON_TEST")]
+    #[serde(rename = "TON_TEST")]
+    TonTest,
+
+    /// Bitcoin testnet.
+    #[strum(to_string = "BTC_TEST")]
+    #[serde(rename = "BTC_TEST")]
+    BtcTest,
+
+    /// Ether on the Sepolia testnet.
+    #[strum(to_string = "ETH_TEST")]
+    #[serde(rename = "ETH_TEST")]
+    EthTest,
+
+    /// USDC on Ethereum.
+    #[strum(to_string = "USDC_ERC20")]
+    #[serde(rename = "USDC_ERC20")]
+    UsdcErc20,
+
+    /// USDT on Ethereum.
+    #[strum(to_string = "USDT_ERC20")]
+    #[serde(rename = "USDT_ERC20")]
+    UsdtErc20,
+
+    /// USDT on Tron.
+    #[strum(to_string = "USDT_TRC20")]
+    #[serde(rename = "USDT_TRC20")]
+    UsdtTrc20,
+
+    /// USDC on the Solana devnet.
+    #[strum(to_string = "USDC_SOL_TEST")]
+    #[serde(rename = "USDC_SOL_TEST")]
+    UsdcSolTest,
+
+    /// USDT on the Solana devnet.
+    #[strum(to_string = "USDT_SOL_TEST")]
+    #[serde(rename = "USDT_SOL_TEST")]
+    UsdtSolTest,
+
+    /// USDT on the Ethereum Sepolia testnet.
+    #[strum(to_string = "USDT_ETH_TEST")]
+    #[serde(rename = "USDT_ETH_TEST")]
+    UsdtEthTest,
+
+    /// ALTXUSDT token on the TON testnet.
+    #[strum(to_string = "ALTXUSDT_TEST")]
+    #[serde(rename = "ALTXUSDT_TEST")]
+    AltxusdtTest,
+}
+
+impl CryptoCurrency {
+    /// Decimal places of the smallest unit (`1 SOL` is `10^9` lamports).
+    pub fn decimals(&self) -> u32 {
+        match self {
+            CryptoCurrency::Btc | CryptoCurrency::BtcTest => 8,
+            CryptoCurrency::Eth | CryptoCurrency::EthTest => 18,
+            CryptoCurrency::Sol
+            | CryptoCurrency::SolTest
+            | CryptoCurrency::Ton
+            | CryptoCurrency::TonTest => 9,
+            CryptoCurrency::UsdcSol
+            | CryptoCurrency::UsdcSolTest
+            | CryptoCurrency::UsdcErc20
+            | CryptoCurrency::UsdtErc20
+            | CryptoCurrency::UsdtTrc20
+            | CryptoCurrency::UsdtSolTest
+            | CryptoCurrency::UsdtEthTest
+            | CryptoCurrency::AltxusdtTest => 6,
+        }
+    }
 }
 
 /// A fiat or a crypto currency.
@@ -70,6 +157,14 @@ impl Currency {
 
     pub fn is_crypto(&self) -> bool {
         matches!(self, Currency::Crypto(_))
+    }
+
+    /// Decimal places of the smallest unit; `None` for a fiat currency that has no minor unit.
+    pub fn decimals(&self) -> Option<u32> {
+        match self {
+            Currency::Fiat(fiat) => fiat.exponent().map(u32::from),
+            Currency::Crypto(crypto) => Some(crypto.decimals()),
+        }
     }
 
     pub fn fiat(fiat: FiatCurrency) -> Self {
@@ -156,6 +251,68 @@ mod tests {
             serde_json::from_str::<Currency>(&usdc).unwrap(),
             Currency::Crypto(CryptoCurrency::UsdcSol)
         );
+    }
+
+    #[test]
+    fn the_crypto_list_is_the_list_of_every_system_asset() {
+        // The codes are the `asset_id` of the system assets of Custody and the codes of the
+        // Ledger currencies; a code added or renamed here is a decision for all of them.
+        let codes: Vec<String> = CryptoCurrency::iter().map(|c| c.to_string()).collect();
+        assert_eq!(
+            codes,
+            [
+                "USDC_SOL",
+                "BTC",
+                "ETH",
+                "SOL",
+                "SOL_TEST",
+                "TON",
+                "TON_TEST",
+                "BTC_TEST",
+                "ETH_TEST",
+                "USDC_ERC20",
+                "USDT_ERC20",
+                "USDT_TRC20",
+                "USDC_SOL_TEST",
+                "USDT_SOL_TEST",
+                "USDT_ETH_TEST",
+                "ALTXUSDT_TEST",
+            ]
+        );
+        let mut unique = codes.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), codes.len());
+    }
+
+    #[test]
+    fn crypto_decimals_are_those_of_the_networks() {
+        let decimals: Vec<(String, u32)> = CryptoCurrency::iter()
+            .map(|c| (c.to_string(), c.decimals()))
+            .collect();
+        for (code, expected) in [
+            ("BTC", 8),
+            ("BTC_TEST", 8),
+            ("ETH", 18),
+            ("ETH_TEST", 18),
+            ("SOL", 9),
+            ("SOL_TEST", 9),
+            ("TON", 9),
+            ("TON_TEST", 9),
+            ("USDC_SOL", 6),
+            ("USDC_SOL_TEST", 6),
+            ("USDC_ERC20", 6),
+            ("USDT_ERC20", 6),
+            ("USDT_TRC20", 6),
+            ("USDT_SOL_TEST", 6),
+            ("USDT_ETH_TEST", 6),
+            ("ALTXUSDT_TEST", 6),
+        ] {
+            assert!(decimals.contains(&(code.to_owned(), expected)), "{code}");
+        }
+        assert_eq!(Currency::fiat(FiatCurrency::USD).decimals(), Some(2));
+        assert_eq!(Currency::fiat(FiatCurrency::JPY).decimals(), Some(0));
+        assert_eq!(Currency::crypto(CryptoCurrency::Sol).decimals(), Some(9));
     }
 
     #[test]
