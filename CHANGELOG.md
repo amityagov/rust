@@ -6,6 +6,8 @@ may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-06
+
 ### Added
 
 - `currency`: `CryptoCurrency` lists every system asset of Custody (`SOL`, `TON`, `BTC_TEST`,
