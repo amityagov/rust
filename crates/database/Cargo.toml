@@ -1,11 +1,11 @@
 [package]
 name = "database"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 
 [dependencies]
 serde = { version = "1", features = ["derive"], default-features = false }
-sqlx = { version = "0.8.6", features = ["postgres", "uuid", "chrono", "runtime-tokio", "macros", "derive", "rust_decimal", "sqlx-postgres", "time"], default-features = false }
+sqlx = { version = "0.9.0", features = ["postgres", "uuid", "chrono", "runtime-tokio", "macros", "derive", "rust_decimal", "sqlx-postgres", "time"], default-features = false }
 anyhow = { version = "1.0.100", default-features = false }
 tracing = { version = "0", default-features = false }
 

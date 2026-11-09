@@ -6,6 +6,15 @@ may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-09
+
+### Changed
+
+- `locks` and `database`: `sqlx` 0.9 (was 0.8). An application that uses them must be on `sqlx` 0.9 too, because the
+  `PgPool` types of two versions are different types. sqlx 0.9 no longer has the `runtime-tokio-rustls` feature; the
+  TLS backend is chosen with `tls-rustls-ring` and the like.
+- `currency` (feature `sqlx`) stays on `sqlx` 0.8 until `iso_currency` offers a build for 0.9.
+
 ## [0.6.0] - 2026-11-06
 
 ### Added
