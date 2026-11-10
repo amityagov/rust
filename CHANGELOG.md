@@ -6,6 +6,10 @@ may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+
+- `currency`: `CryptoCurrency::UsdtSol` (`USDT_SOL`, 6 decimals), USDT on Solana mainnet.
+
 ## [0.7.0] - 2026-11-09
 
 ### Changed

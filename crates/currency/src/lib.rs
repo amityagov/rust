@@ -82,6 +82,11 @@ pub enum CryptoCurrency {
     #[serde(rename = "USDT_TRC20")]
     UsdtTrc20,
 
+    /// USDT on Solana.
+    #[strum(to_string = "USDT_SOL")]
+    #[serde(rename = "USDT_SOL")]
+    UsdtSol,
+
     /// USDC on the Solana devnet.
     #[strum(to_string = "USDC_SOL_TEST")]
     #[serde(rename = "USDC_SOL_TEST")]
@@ -118,6 +123,7 @@ impl CryptoCurrency {
             | CryptoCurrency::UsdcErc20
             | CryptoCurrency::UsdtErc20
             | CryptoCurrency::UsdtTrc20
+            | CryptoCurrency::UsdtSol
             | CryptoCurrency::UsdtSolTest
             | CryptoCurrency::UsdtEthTest
             | CryptoCurrency::UsdtTonTest => 6,
@@ -273,6 +279,7 @@ mod tests {
                 "USDC_ERC20",
                 "USDT_ERC20",
                 "USDT_TRC20",
+                "USDT_SOL",
                 "USDC_SOL_TEST",
                 "USDT_SOL_TEST",
                 "USDT_ETH_TEST",
@@ -304,6 +311,7 @@ mod tests {
             ("USDC_ERC20", 6),
             ("USDT_ERC20", 6),
             ("USDT_TRC20", 6),
+            ("USDT_SOL", 6),
             ("USDT_SOL_TEST", 6),
             ("USDT_ETH_TEST", 6),
             ("USDT_TON_TEST", 6),
