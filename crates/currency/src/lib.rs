@@ -106,6 +106,16 @@ pub enum CryptoCurrency {
     #[strum(to_string = "USDT_TON_TEST")]
     #[serde(rename = "USDT_TON_TEST")]
     UsdtTonTest,
+
+    /// XRP on the XRP Ledger.
+    #[strum(to_string = "XRP")]
+    #[serde(rename = "XRP")]
+    Xrp,
+
+    /// XRP on the XRP Ledger testnet.
+    #[strum(to_string = "XRP_TEST")]
+    #[serde(rename = "XRP_TEST")]
+    XrpTest,
 }
 
 impl CryptoCurrency {
@@ -118,6 +128,7 @@ impl CryptoCurrency {
             | CryptoCurrency::SolTest
             | CryptoCurrency::Ton
             | CryptoCurrency::TonTest => 9,
+            CryptoCurrency::Xrp | CryptoCurrency::XrpTest => 6,
             CryptoCurrency::UsdcSol
             | CryptoCurrency::UsdcSolTest
             | CryptoCurrency::UsdcErc20
@@ -284,6 +295,8 @@ mod tests {
                 "USDT_SOL_TEST",
                 "USDT_ETH_TEST",
                 "USDT_TON_TEST",
+                "XRP",
+                "XRP_TEST",
             ]
         );
         let mut unique = codes.clone();
@@ -315,6 +328,8 @@ mod tests {
             ("USDT_SOL_TEST", 6),
             ("USDT_ETH_TEST", 6),
             ("USDT_TON_TEST", 6),
+            ("XRP", 6),
+            ("XRP_TEST", 6),
         ] {
             assert!(decimals.contains(&(code.to_owned(), expected)), "{code}");
         }
