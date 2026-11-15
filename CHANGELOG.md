@@ -6,6 +6,13 @@ may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-16
+
+### Added
+
+- `currency`: `CryptoCurrency::Xrp` (`XRP`, 6 decimals) and `CryptoCurrency::XrpTest` (`XRP_TEST`), the XRP Ledger
+  and its testnet (money#847).
+
 ## [0.8.0] - 2026-11-10
 
 ### Added
