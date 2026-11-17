@@ -6,6 +6,15 @@ may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-17
+
+### Added
+
+- `locks`: `LockGuard::renew`, `LockGuard::keep_alive`, `LockGuard::is_lost` and `LockGuard::lost`. A lock taken with
+  a short TTL and kept alive in the background frees within one TTL when its owner crashes, however long the work
+  takes, and the work learns when the lock is lost. A renewal updates the row only while it is ours and has not run
+  out, so it never brings back a released lock. No schema change: `SCHEMA_SQL` is the same.
+
 ## [0.9.0] - 2026-11-16
 
 ### Added
