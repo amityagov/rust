@@ -13,10 +13,22 @@
 //!
 //! Every successful acquisition is a separate holder, even for the same [`DbLock`] value or the
 //! same `owner` string: two tasks, or two calls, never hold one lock at the same time.
+//!
+//! # Long work: a short TTL that is renewed
+//!
+//! A TTL sized for the longest work means a crashed owner blocks the lock for that long. Take the
+//! lock with a short TTL instead and call [`LockGuard::keep_alive`]: a background task renews it
+//! every third of the TTL, so a crash frees the lock within one TTL, and the work can run as long
+//! as it needs. The work must watch [`LockGuard::lost`] (or [`LockGuard::is_lost`]): when the lock
+//! could not be renewed before it ran out, another holder may already have it, and the work has to
+//! stop.
 
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use sqlx::PgPool;
+use tokio::sync::watch;
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 /// SQL that creates the `public.locks` table and the two functions this crate calls. It can be run
@@ -42,8 +54,12 @@ pub struct DbLock {
 pub struct LockGuard {
     name: String,
     holder: String,
+    ttl_seconds: i64,
     pool: PgPool,
     armed: bool,
+    /// Turns `true` once the lock is known to be lost; fed by the heartbeat.
+    lost: Arc<watch::Sender<bool>>,
+    heartbeat: Option<JoinHandle<()>>,
 }
 
 impl DbLock {
@@ -79,8 +95,11 @@ impl DbLock {
         Ok(acquired.then(|| LockGuard {
             name: self.name.clone(),
             holder,
+            ttl_seconds: self.ttl_seconds,
             pool: pool.clone(),
             armed: true,
+            lost: Arc::new(watch::channel(false).0),
+            heartbeat: None,
         }))
     }
 
@@ -127,6 +146,67 @@ impl DbLock {
 }
 
 impl LockGuard {
+    /// Extends the lock by its TTL, counted from now. `false` means the lock is no longer ours: it
+    /// ran out (even if nobody took it since, because work may have gone on unprotected in the
+    /// gap) or another holder has it. An error leaves the lock as it was.
+    pub async fn renew(&self) -> anyhow::Result<bool> {
+        renew(&self.pool, &self.name, &self.holder, self.ttl_seconds).await
+    }
+
+    /// Renews the lock in the background, every third of the TTL, until the guard is released or
+    /// dropped. Calling it again does nothing.
+    ///
+    /// When a renewal finds the lock lost, or none succeeded for a whole TTL (the database is not
+    /// reachable, so it may have been taken), [`LockGuard::lost`] completes and the heartbeat
+    /// stops. The work that the lock protects has to stop then.
+    pub fn keep_alive(&mut self) {
+        if self.heartbeat.is_some() {
+            return;
+        }
+        let (pool, name, holder) = (self.pool.clone(), self.name.clone(), self.holder.clone());
+        let (ttl_seconds, lost) = (self.ttl_seconds, Arc::clone(&self.lost));
+        let ttl = Duration::from_secs(ttl_seconds.unsigned_abs());
+        self.heartbeat = Some(tokio::spawn(async move {
+            // The lock was taken just now. Times are measured from before each request, so the
+            // estimate of when the lock runs out is never later than the database's.
+            let mut last_renewed = Instant::now();
+            loop {
+                tokio::time::sleep(ttl / 3).await;
+                let started = Instant::now();
+                match renew(&pool, &name, &holder, ttl_seconds).await {
+                    Ok(true) => last_renewed = started,
+                    Ok(false) => {
+                        tracing::error!("Lock '{name}' was lost: it ran out or has another holder");
+                        break;
+                    }
+                    Err(e) if last_renewed.elapsed() >= ttl => {
+                        tracing::error!(
+                            "Lock '{name}' is presumed lost, no renewal for {ttl:?}: {e}"
+                        );
+                        break;
+                    }
+                    Err(e) => tracing::warn!("Could not renew lock '{name}', will try again: {e}"),
+                }
+            }
+            lost.send_replace(true);
+        }));
+    }
+
+    /// Whether the lock is known to be lost. Only meaningful after [`LockGuard::keep_alive`]:
+    /// without a heartbeat nothing finds out.
+    pub fn is_lost(&self) -> bool {
+        *self.lost.borrow()
+    }
+
+    /// Completes when the lock is known to be lost (see [`LockGuard::keep_alive`]); never, for a
+    /// guard that is not kept alive. Meant for a `select!` next to the protected work.
+    pub async fn lost(&self) {
+        let mut receiver = self.lost.subscribe();
+        // `wait_for` returns at once when the value already matches, and errors only if the sender
+        // is gone, which cannot happen while `self` holds it.
+        let _ = receiver.wait_for(|lost| *lost).await;
+    }
+
     /// Releases the lock and waits for the database; `false` if the lock was no longer ours
     /// (it had expired and someone else took it).
     ///
@@ -134,12 +214,19 @@ impl LockGuard {
     pub async fn release(mut self) -> anyhow::Result<bool> {
         // Disarm first: the guard is dropped when this function returns, and must not release twice.
         self.armed = false;
+        // The heartbeat goes first: a renewal after the release must not find a lock to extend.
+        if let Some(heartbeat) = self.heartbeat.take() {
+            heartbeat.abort();
+        }
         release(&self.pool, &self.name, &self.holder).await
     }
 }
 
 impl Drop for LockGuard {
     fn drop(&mut self) {
+        if let Some(heartbeat) = self.heartbeat.take() {
+            heartbeat.abort();
+        }
         if !self.armed {
             return;
         }
@@ -162,6 +249,24 @@ impl Drop for LockGuard {
             }
         });
     }
+}
+
+/// Extends the lock only while it is ours and has not run out; never inserts a row, so a renewal
+/// that is late (after a release, or after the lock ran out and was cleaned up) cannot bring the
+/// lock back.
+async fn renew(pool: &PgPool, name: &str, holder: &str, ttl_seconds: i64) -> anyhow::Result<bool> {
+    let renewed = sqlx::query(
+        "UPDATE public.locks
+            SET expires_at = now() + make_interval(secs => $3)
+          WHERE name = $1 AND owner_id = $2 AND expires_at > now()",
+    )
+    .bind(name)
+    .bind(holder)
+    .bind(ttl_seconds)
+    .execute(pool)
+    .await?
+    .rows_affected();
+    Ok(renewed == 1)
 }
 
 async fn release(pool: &PgPool, name: &str, holder: &str) -> anyhow::Result<bool> {
@@ -314,5 +419,88 @@ mod tests {
         }
 
         assert_eq!(winners, 1);
+    }
+
+    #[tokio::test]
+    async fn a_renewal_extends_the_lock_and_a_lost_lock_cannot_be_renewed() {
+        let Some(pool) = pool().await else { return };
+        let lock = DbLock::new("o", &unique_name(), Some(2)).unwrap();
+
+        let guard = lock.try_acquire(&pool).await.unwrap().unwrap();
+        tokio::time::sleep(Duration::from_millis(1200)).await;
+        assert!(guard.renew().await.unwrap());
+        // 1.2 s on, the original TTL would have run out; the renewal pushed it to 3.2 s.
+        tokio::time::sleep(Duration::from_millis(1200)).await;
+        assert!(lock.try_acquire(&pool).await.unwrap().is_none());
+
+        // After it ran out and someone else took it, the old holder cannot renew.
+        tokio::time::sleep(Duration::from_millis(2200)).await;
+        let _new = lock.try_acquire(&pool).await.unwrap().unwrap();
+        assert!(!guard.renew().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn a_renewal_does_not_bring_back_a_released_lock() {
+        let Some(pool) = pool().await else { return };
+        let lock = DbLock::new("o", &unique_name(), None).unwrap();
+
+        let guard = lock.try_acquire(&pool).await.unwrap().unwrap();
+        let (name, holder) = (guard.name.clone(), guard.holder.clone());
+        assert!(guard.release().await.unwrap());
+
+        assert!(!renew(&pool, &name, &holder, 60).await.unwrap());
+        assert!(lock.try_acquire(&pool).await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn a_kept_alive_lock_outlives_its_ttl_and_frees_when_released() {
+        let Some(pool) = pool().await else { return };
+        let lock = DbLock::new("o", &unique_name(), Some(1)).unwrap();
+
+        let mut guard = lock.try_acquire(&pool).await.unwrap().unwrap();
+        guard.keep_alive();
+        guard.keep_alive();
+        tokio::time::sleep(Duration::from_millis(2500)).await;
+        assert!(!guard.is_lost());
+        assert!(
+            lock.try_acquire(&pool).await.unwrap().is_none(),
+            "still held after more than two TTLs"
+        );
+
+        assert!(guard.release().await.unwrap());
+        assert!(lock.try_acquire(&pool).await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn a_lock_that_is_taken_over_is_reported_lost() {
+        let Some(pool) = pool().await else { return };
+        let name = unique_name();
+        let lock = DbLock::new("o", &name, Some(1)).unwrap();
+
+        let mut guard = lock.try_acquire(&pool).await.unwrap().unwrap();
+        guard.keep_alive();
+        // Someone removes the row (an operator, a clean-up) and another holder takes the lock.
+        sqlx::query("DELETE FROM public.locks WHERE name = $1")
+            .bind(&name)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let _other = lock.try_acquire(&pool).await.unwrap().unwrap();
+
+        tokio::time::timeout(Duration::from_secs(3), guard.lost())
+            .await
+            .expect("the loss is reported within a TTL");
+        assert!(guard.is_lost());
+    }
+
+    #[tokio::test]
+    async fn a_guard_that_is_not_kept_alive_never_reports_a_loss() {
+        let Some(pool) = pool().await else { return };
+        let lock = DbLock::new("o", &unique_name(), None).unwrap();
+        let guard = lock.try_acquire(&pool).await.unwrap().unwrap();
+
+        let waited = tokio::time::timeout(Duration::from_millis(200), guard.lost()).await;
+        assert!(waited.is_err());
+        assert!(!guard.is_lost());
     }
 }
